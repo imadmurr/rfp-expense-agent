@@ -1,31 +1,26 @@
 """
-RFP Expense Agent - Custom Functions Version
-=============================================
+RFP Expense Agent - Custom Functions Only (Lab 3 Pattern)
+==========================================================
 Assignment: AI BootCamp 102 - Day 1
 
-This is the ALTERNATIVE implementation using the AgentsClient pattern
-from Lab 3 (Custom Functions). It demonstrates:
+This is the STANDALONE Lab 3 implementation using AgentsClient directly.
+It focuses on the custom function calling pattern.
 
-Lab 3 Concepts:
-  - AgentsClient connection
-  - FunctionTool with custom user_functions
-  - ToolSet with auto function calling enabled
-  - create_agent with toolset
-  - threads.create for conversation management
-  - messages.create + runs.create_and_process
-  - get_last_message_text_by_role
-  - Conversation history with ListSortOrder
-  - Cleanup: delete_agent
-
-Combined with Lab 1 Concepts:
-  - Agent instructions for grounding behavior
-  - Policy-based responses (simulates file search grounding)
-
-Use this file when you want to demonstrate the custom function calling
-pattern specifically. The main agent.py uses the Lab 2 pattern.
+Demonstrates:
+  - AgentsClient direct connection (Lab 3)
+  - FunctionTool with custom user_functions (Lab 3)
+  - ToolSet with auto function calling enabled (Lab 3)
+  - create_agent with toolset (Lab 3)
+  - threads.create for conversation management (Lab 3)
+  - messages.create + runs.create_and_process (Lab 3)
+  - get_last_message_text_by_role (Lab 3)
+  - Conversation history with ListSortOrder (Lab 3)
+  - Grounding via instructions (Lab 1)
+  - Cleanup: delete_agent (Lab 3)
 """
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 # ---------------------------------------------------------------
@@ -39,15 +34,12 @@ if not project_endpoint or project_endpoint == "your_project_endpoint":
     print("ERROR: Please set PROJECT_ENDPOINT in the .env file.")
     exit(1)
 
-# Load expense policy content to embed in instructions (grounding - Lab 1)
-script_dir = os.path.dirname(os.path.abspath(__file__))
-policy_path = os.path.join(script_dir, "expense_policy.txt")
-with open(policy_path, "r") as f:
-    policy_content = f.read()
+# Load policy + data content to embed in instructions (Lab 1 grounding)
+script_dir = Path(__file__).parent
 
-# Load data for context
-data_path = os.path.join(script_dir, "data.txt")
-with open(data_path, "r") as f:
+with open(script_dir / "expense_policy.txt", "r") as f:
+    policy_content = f.read()
+with open(script_dir / "data.txt", "r") as f:
     data_content = f.read()
 
 print("\n" + "=" * 60)
@@ -55,13 +47,13 @@ print("RFP EXPENSE AGENT - Custom Functions Version")
 print("=" * 60)
 
 # ---------------------------------------------------------------
-# Add references (Lab 3 pattern)
+# Add references (Lab 3 pattern - AgentsClient directly)
 # ---------------------------------------------------------------
 from azure.identity import DefaultAzureCredential
 from azure.ai.agents import AgentsClient
 from azure.ai.agents.models import FunctionTool, ToolSet, ListSortOrder, MessageRole
 
-# Import our custom functions (Lab 3 pattern)
+# Import our custom functions (Lab 3)
 from user_functions import user_functions
 
 # ---------------------------------------------------------------
@@ -77,50 +69,41 @@ agent_client = AgentsClient(
 )
 
 # ---------------------------------------------------------------
-# Define an agent that can use the custom functions (Lab 3)
+# Define agent with custom function tools (Lab 3)
 # ---------------------------------------------------------------
 with agent_client:
 
-    # Create FunctionTool from our custom functions (Lab 3 pattern)
+    # Lab 3: Create FunctionTool from our custom functions
     functions = FunctionTool(user_functions)
     toolset = ToolSet()
     toolset.add(functions)
 
-    # Enable auto function calling (Lab 3 key concept)
-    # This allows the agent to automatically detect and call our functions
+    # Lab 3 KEY CONCEPT: Enable auto function calling
     agent_client.enable_auto_function_calls(toolset)
 
-    # Agent instructions include grounding data (Lab 1 concept)
-    # Since we can't use file search with AgentsClient, we embed the
-    # policy content directly in the instructions
+    # Lab 1: Embed grounding data directly in instructions
     agent_instructions = f"""You are an RFP Expense Analyzer for Javista Services SAL.
 
-You help users analyze RFP expenses and manage expense reports.
-
-EXPENSE POLICY (use this to answer policy questions):
+EXPENSE POLICY (reference this for policy questions):
 {policy_content}
 
-RFP DATA (use this to answer data questions):
+RFP DATA (reference this for data questions):
 {data_content}
 
 Your capabilities:
-1. Answer questions about the RFP expense data (consultant costs, hours, rates, etc.)
-2. Answer questions about the expense policy (rate caps, approval thresholds, travel rules)
+1. Answer questions about the RFP expense data
+2. Answer questions about the expense policy
 3. Compare actual costs against policy rate caps
-4. When a user wants to submit an expense report:
-   - Collect their email address, project name, description, and total amount
-   - Then use the submit_expense_report function
-   - Tell the user the filename where the report was saved
-5. When a user wants to flag a budget overrun:
-   - Collect the category, budgeted amount, actual amount, and reason
-   - Then use the flag_budget_overrun function
-   - Tell the user the filename where the alert was saved
+4. Submit expense reports - collect email, project name, description, amount
+   then use submit_expense_report function
+5. Flag budget overruns - collect category, budgeted/actual amounts, reason
+   then use flag_budget_overrun function
 
-Be concise and reference specific policy rules when relevant.
-When performing calculations, show your work clearly.
+Be concise. Reference specific policy rules when relevant.
+Show calculations clearly when doing math.
 """
 
-    # Create the agent with the toolset (Lab 3 pattern)
+    # Lab 3: Create the agent with toolset
     print("Creating agent with custom function tools...")
     agent = agent_client.create_agent(
         model=model_deployment,
@@ -128,18 +111,21 @@ When performing calculations, show your work clearly.
         instructions=agent_instructions,
         toolset=toolset,
     )
-    print(f"  ✓ Agent created: {agent.name} (ID: {agent.id})")
+    print(f"  Agent created: {agent.name} (ID: {agent.id})")
 
-    # Create a thread for the conversation (Lab 3 pattern)
+    # Lab 3: Create thread
     thread = agent_client.threads.create()
-    print(f"  ✓ Thread created (ID: {thread.id})")
+    print(f"  Thread created (ID: {thread.id})")
 
     # -----------------------------------------------------------
-    # Interactive chat loop (Lab 3 pattern)
+    # Chat loop (Lab 3)
     # -----------------------------------------------------------
     print("\n" + "=" * 60)
     print("Chat with the RFP Expense Agent (Custom Functions)")
-    print("Try: 'Submit an expense report' or 'Flag a budget overrun'")
+    print("-" * 60)
+    print("Try: 'Submit an expense report'")
+    print("Try: 'Flag a budget overrun for travel'")
+    print("Try: 'What is the max rate for an AI Engineer?'")
     print("Type 'quit' to exit.")
     print("=" * 60 + "\n")
 
@@ -151,32 +137,25 @@ When performing calculations, show your work clearly.
             print("\nEnding conversation...\n")
             break
 
-        # -----------------------------------------------------------
-        # Send a prompt to the agent (Lab 3 pattern)
-        # -----------------------------------------------------------
+        # Lab 3: Send message to thread
         message = agent_client.messages.create(
             thread_id=thread.id,
             role="user",
             content=user_prompt,
         )
 
-        # Run the thread with auto function calling (Lab 3 key concept)
-        # create_and_process automatically handles function calls
+        # Lab 3: Run with auto function calling
         run = agent_client.runs.create_and_process(
             thread_id=thread.id,
             agent_id=agent.id,
         )
 
-        # -----------------------------------------------------------
-        # Check the run status for failures (Lab 3)
-        # -----------------------------------------------------------
+        # Lab 3: Check for failures
         if run.status == "failed":
-            print(f"\n  ✗ Run failed: {run.last_error}\n")
+            print(f"\n  Run failed: {run.last_error}\n")
             continue
 
-        # -----------------------------------------------------------
-        # Show the latest response from the agent (Lab 3)
-        # -----------------------------------------------------------
+        # Lab 3: Get agent response
         last_msg = agent_client.messages.get_last_message_text_by_role(
             thread_id=thread.id,
             role=MessageRole.AGENT,
@@ -185,7 +164,7 @@ When performing calculations, show your work clearly.
             print(f"\nAgent: {last_msg.text.value}\n")
 
     # -----------------------------------------------------------
-    # Get the conversation history (Lab 3 pattern)
+    # Conversation history (Lab 3)
     # -----------------------------------------------------------
     print("=" * 60)
     print("CONVERSATION LOG")
@@ -202,12 +181,12 @@ When performing calculations, show your work clearly.
             print(f"  [{role}]: {last_text.text.value}\n")
 
     # -----------------------------------------------------------
-    # Clean up (Lab 3 pattern)
+    # Clean up (Lab 3)
     # -----------------------------------------------------------
     print("=" * 60)
     print("CLEANUP")
     print("=" * 60)
 
     agent_client.delete_agent(agent.id)
-    print("  ✓ Agent deleted")
+    print("  Agent deleted")
     print("\n  All resources cleaned up successfully.\n")

@@ -6,39 +6,31 @@
 
 ## Overview
 
-This project combines **all concepts** from the three Day 1 labs into a single, cohesive AI agent application themed around the Javista Services RFP project.
+This project combines **all concepts** from the three Day 1 labs into a single AI agent themed around the Javista RFP project.
 
-## Concepts Covered
+## Concepts Covered Per Lab
 
-### From Lab 1 — Agent Fundamentals (Foundry Portal)
-| Concept | Where in Code |
-|---------|---------------|
-| Agent instructions (grounding) | `agent.py` line ~120: `agent_instructions` |
-| File search / knowledge base | `agent.py`: uploads `expense_policy.txt` for grounding |
-| Code Interpreter tool | `agent.py`: `CodeInterpreterTool` creation |
+### Lab 1 — Agent Fundamentals
+- Agent instructions for grounding behavior
+- File search / knowledge base (expense policy)
+- Code Interpreter tool for data analysis
 
-### From Lab 2 — Develop an AI Agent (SDK)
-| Concept | Where in Code |
-|---------|---------------|
-| `AIProjectClient` connection | `agent.py`: `with` block with credential + client |
-| File upload via `openai_client.files.create` | `agent.py`: uploads `data.txt` and `expense_policy.txt` |
-| `CodeInterpreterTool` + `CodeInterpreterToolAuto` | `agent.py`: code interpreter with file IDs |
-| `PromptAgentDefinition` | `agent.py`: `project_client.agents.create_version` |
-| Conversations API | `agent.py`: `conversations.create`, `items.create`, `responses.create` |
-| Conversation history | `agent.py`: `conversations.items.list` |
-| Cleanup | `agent.py`: `conversations.delete` + `agents.delete_version` |
+### Lab 2 — Develop an AI Agent (SDK)
+- `AIProjectClient` connection to Foundry project
+- File upload via `agents.upload_file_and_poll()`
+- `CodeInterpreterTool` with file IDs
+- Thread-based conversations (create, message, run)
+- Conversation history retrieval
+- Cleanup (delete agent)
 
-### From Lab 3 — Custom Functions
-| Concept | Where in Code |
-|---------|---------------|
-| Custom function definitions | `user_functions.py`: `submit_expense_report`, `flag_budget_overrun` |
-| `FunctionTool` + `ToolSet` | `agent_functions.py`: toolset creation |
-| `enable_auto_function_calls` | `agent_functions.py`: auto-calling enabled |
-| `AgentsClient` connection | `agent_functions.py`: direct agent client |
-| Thread + messages API | `agent_functions.py`: `threads.create`, `messages.create` |
-| `create_and_process` for auto function execution | `agent_functions.py`: run with auto-processing |
-| `get_last_message_text_by_role` | `agent_functions.py`: retrieve agent response |
-| `ListSortOrder.ASCENDING` history | `agent_functions.py`: conversation log |
+### Lab 3 — Custom Functions
+- Custom function definitions in `user_functions.py`
+- `FunctionTool` + `ToolSet`
+- `enable_auto_function_calls` for automatic tool execution
+- `AgentsClient` direct connection
+- `create_and_process` for auto function handling
+- `get_last_message_text_by_role` for response retrieval
+- `ListSortOrder.ASCENDING` conversation history
 
 ## Project Structure
 
@@ -49,96 +41,88 @@ rfp-expense-agent/
 ├── data.txt                # RFP expense data for analysis
 ├── expense_policy.txt      # Expense policy for grounding
 ├── user_functions.py       # Custom functions (Lab 3)
-├── agent.py                # Main agent: Code Interpreter + Files (Lab 1+2)
-├── agent_functions.py      # Alt agent: Custom Functions (Lab 3)
+├── agent.py                # MAIN: All 3 labs combined (Code Interpreter + Functions)
+├── agent_functions.py      # ALT: Lab 3 standalone (Functions only)
 └── README.md               # This file
 ```
 
-## Two Agent Implementations
+## Two Implementations
 
-### `agent.py` — Code Interpreter Agent (Lab 1 + Lab 2)
-Uses `AIProjectClient` + `OpenAI` client with:
-- File upload for grounding
-- CodeInterpreterTool for data analysis
-- Conversations API
+### `agent.py` — All Labs Combined (Recommended)
+Uses `AIProjectClient` → `.agents` → `AgentsClient` with:
+- File upload + CodeInterpreterTool (Lab 1 + 2)
+- FunctionTool + ToolSet with auto calling (Lab 3)
+- Both tools available simultaneously
 
-**Best for:** Analyzing data, creating charts, statistical calculations
+### `agent_functions.py` — Lab 3 Standalone
+Uses `AgentsClient` directly with:
+- FunctionTool only (no Code Interpreter)
+- Data embedded in instructions instead of file upload
 
-### `agent_functions.py` — Custom Functions Agent (Lab 3)
-Uses `AgentsClient` with:
-- FunctionTool + ToolSet
-- Auto function calling
-- Thread-based messaging
+## Setup & Run (Azure Cloud Shell)
 
-**Best for:** Submitting expense reports, flagging budget overruns
-
-## Setup & Run
-
-### 1. Prerequisites
-- Azure subscription with AI Foundry access
-- Python 3.12+
-- A deployed model (gpt-4.1) in your Foundry project
-
-### 2. Install Dependencies
+### 1. Push to GitHub
 ```bash
+git init
+git add .
+git commit -m "RFP Expense Agent assignment"
+git remote add origin https://github.com/YOUR_USERNAME/rfp-expense-agent.git
+git push -u origin main
+```
+
+### 2. In Azure Cloud Shell (PowerShell, Classic version)
+```powershell
+rm -r rfp-expense-agent -f
+git clone https://github.com/YOUR_USERNAME/rfp-expense-agent.git
+cd rfp-expense-agent
+
 python -m venv labenv
-source labenv/bin/activate        # Linux/Mac
-# .\labenv\Scripts\Activate.ps1  # Windows PowerShell
+./labenv/bin/Activate.ps1
 pip install -r requirements.txt
-```
 
-### 3. Configure
-Edit `.env` and set your project endpoint:
-```
-PROJECT_ENDPOINT=https://your-project.services.ai.azure.com/api/projects/your-project-id
-MODEL_DEPLOYMENT_NAME=gpt-4.1
-```
-
-### 4. Sign into Azure
-```bash
+code .env    # Set PROJECT_ENDPOINT, then CTRL+S, CTRL+Q
 az login
+
+python agent.py              # All labs combined
+# OR
+python agent_functions.py    # Lab 3 standalone
 ```
 
-### 5. Run
+## Sample Prompts
 
-**Option A — Code Interpreter Agent:**
-```bash
-python agent.py
-```
-
-**Option B — Custom Functions Agent:**
-```bash
-python agent_functions.py
-```
-
-## Sample Prompts to Try
-
-### Data Analysis (agent.py)
+**Data Analysis (agent.py):**
 - `What's the category with the highest cost?`
-- `Create a text-based bar chart showing cost by consultant`
+- `Create a text-based bar chart of costs by consultant`
 - `What's the standard deviation of hourly rates?`
 - `Which consultants exceed their policy rate caps?`
-- `What's the total profit margin if we add 15%?`
 
-### Policy Questions (both agents)
+**Policy Questions (both agents):**
 - `What's the maximum rate for an AI Engineer?`
 - `What approval is needed for a $75,000 project?`
-- `What are the travel expense rules?`
 
-### Custom Functions (agent_functions.py)
-- `I want to submit an expense report`
-- `Flag a budget overrun for travel expenses`
+**Custom Functions (both agents):**
+- `Submit an expense report` → agent collects info → calls function → creates file
+- `Flag a budget overrun for travel` → agent collects info → calls function → creates alert
 
-## Key Differences Between Lab 2 and Lab 3 Patterns
+## Key SDK Pattern (v1 GA)
 
-| Feature | Lab 2 (agent.py) | Lab 3 (agent_functions.py) |
-|---------|-------------------|---------------------------|
-| Client | `AIProjectClient` + `OpenAI` | `AgentsClient` |
-| Agent creation | `agents.create_version` | `create_agent` |
-| Conversation | `conversations.create` | `threads.create` |
-| Send message | `conversations.items.create` | `messages.create` |
-| Run | `responses.create` | `runs.create_and_process` |
-| Response | `response.output_text` | `get_last_message_text_by_role` |
-| Tools | `CodeInterpreterTool` | `FunctionTool` + `ToolSet` |
-| File access | Upload files to project | Embed data in instructions |
-| Cleanup | `conversations.delete` + `agents.delete_version` | `delete_agent` |
+```python
+# Lab 2: Connect via AIProjectClient
+project_client = AIProjectClient(endpoint=..., credential=...)
+agents_client = project_client.agents  # Gets AgentsClient
+
+# Lab 2: Upload files
+file = agents_client.upload_file_and_poll(file_path=..., purpose="agents")
+
+# Lab 1+2: Code Interpreter + Lab 3: Custom Functions
+toolset = ToolSet()
+toolset.add(CodeInterpreterTool(file_ids=[file.id]))
+toolset.add(FunctionTool(user_functions))
+agents_client.enable_auto_function_calls(toolset)
+
+# Create agent + thread + run
+agent = agents_client.create_agent(model=..., toolset=toolset, ...)
+thread = agents_client.threads.create()
+agents_client.messages.create(thread_id=thread.id, role="user", content=...)
+run = agents_client.runs.create_and_process(thread_id=thread.id, agent_id=agent.id)
+```

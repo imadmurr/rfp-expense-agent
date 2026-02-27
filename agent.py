@@ -3,36 +3,30 @@ RFP Expense Analyzer Agent
 ===========================
 Assignment: AI BootCamp 102 - Day 1
 
-This agent combines ALL concepts from the three labs:
+Combines ALL concepts from the three labs into one agent:
 
 Lab 1 (Agent Fundamentals):
-  - Agent with instructions (grounding)
-  - File search / knowledge base (expense policy document)
-  - Code interpreter tool (for data analysis & charts)
+  - Agent with grounding instructions
+  - File search / knowledge base (expense policy)
+  - Code Interpreter tool (data analysis & charts)
 
 Lab 2 (Develop an AI Agent):
-  - Programmatic agent creation via SDK (AIProjectClient + OpenAI client)
+  - Programmatic agent creation via SDK
   - File upload to the project
-  - CodeInterpreterTool with uploaded data file
-  - Conversations API (create, send messages, get responses)
+  - CodeInterpreterTool with uploaded data
+  - Thread-based conversations
   - Conversation history retrieval
-  - Proper cleanup (delete conversation + agent)
+  - Proper cleanup
 
 Lab 3 (Custom Functions):
   - Custom function definitions (user_functions.py)
   - FunctionTool and ToolSet
-  - Auto function calling (agent_client.enable_auto_function_calls)
-  - AgentsClient for function-based agent
-  - Thread management with message history
-  - Cleanup (delete agent)
-
-Architecture:
-  The agent uses TWO tool types simultaneously:
-    1. CodeInterpreterTool  → analyzes uploaded data, generates charts
-    2. FunctionTool          → submits expense reports, flags budget overruns
+  - Auto function calling (enable_auto_function_calls)
+  - create_and_process for automatic tool execution
 """
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 # ---------------------------------------------------------------
@@ -50,9 +44,9 @@ if not project_endpoint or project_endpoint == "your_project_endpoint":
 # ---------------------------------------------------------------
 # Data file paths
 # ---------------------------------------------------------------
-script_dir = os.path.dirname(os.path.abspath(__file__))
-data_file_path = os.path.join(script_dir, "data.txt")
-policy_file_path = os.path.join(script_dir, "expense_policy.txt")
+script_dir = Path(__file__).parent
+data_file_path = script_dir / "data.txt"
+policy_file_path = script_dir / "expense_policy.txt"
 
 # Show the data that will be loaded
 print("\n" + "=" * 60)
@@ -61,7 +55,6 @@ print("=" * 60)
 print(f"\nProject Endpoint: {project_endpoint[:50]}...")
 print(f"Model: {model_deployment}")
 
-# Load and display the data file
 print(f"\nLoading data from: {data_file_path}")
 with open(data_file_path, "r") as f:
     data_content = f.read()
@@ -70,187 +63,206 @@ print(data_content[:500] + "..." if len(data_content) > 500 else data_content)
 print("--- End Preview ---\n")
 
 # ---------------------------------------------------------------
-# Add references (Lab 2 + Lab 3 combined imports)
+# Add references (Lab 2 + Lab 3 combined)
 # ---------------------------------------------------------------
 
-# Lab 2: For file upload, code interpreter, conversations API
+# Lab 2: AIProjectClient to connect to the Foundry project
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-    PromptAgentDefinition,
-    CodeInterpreterTool,
-    CodeInterpreterToolAuto,
-)
 
-# Lab 3: For custom function tools
-from azure.ai.agents import AgentsClient
-from azure.ai.agents.models import FunctionTool, ToolSet, ListSortOrder, MessageRole
+# Lab 1 + 2: CodeInterpreterTool for data analysis
+# Lab 3: FunctionTool, ToolSet for custom functions
+# Lab 3: ListSortOrder, MessageRole for conversation history
+from azure.ai.agents.models import (
+    CodeInterpreterTool,
+    FunctionTool,
+    ToolSet,
+    ListSortOrder,
+    MessageRole,
+)
 
 # Lab 3: Import our custom functions
 from user_functions import user_functions
 
 # ---------------------------------------------------------------
-# Connect to the AI Project and OpenAI clients (Lab 2 pattern)
+# Connect to the AI Project (Lab 2)
+# project_client.agents gives us an AgentsClient (Lab 3)
 # ---------------------------------------------------------------
 print("Connecting to Azure AI Foundry project...")
 
-with (
-    DefaultAzureCredential(
+project_client = AIProjectClient(
+    endpoint=project_endpoint,
+    credential=DefaultAzureCredential(
         exclude_environment_credential=True,
         exclude_managed_identity_credential=True,
-    ) as credential,
-    AIProjectClient(
-        endpoint=project_endpoint, credential=credential
-    ) as project_client,
-    project_client.get_openai_client() as openai_client,
-):
+    ),
+)
 
-    # -----------------------------------------------------------
-    # Upload the data file and create CodeInterpreterTool (Lab 2)
-    # -----------------------------------------------------------
-    print("Uploading data file for analysis...")
-    data_file = openai_client.files.create(
-        file=open(data_file_path, "rb"), purpose="assistants"
-    )
-    print(f"  ✓ Uploaded: {data_file.filename} (ID: {data_file.id})")
+# Get the AgentsClient from the project (bridges Lab 2 + Lab 3)
+agents_client = project_client.agents
 
-    # Also upload the policy file for grounding (Lab 1 concept)
-    print("Uploading expense policy for grounding...")
-    policy_file = openai_client.files.create(
-        file=open(policy_file_path, "rb"), purpose="assistants"
-    )
-    print(f"  ✓ Uploaded: {policy_file.filename} (ID: {policy_file.id})")
+# ---------------------------------------------------------------
+# Upload files (Lab 2: file upload for Code Interpreter)
+# ---------------------------------------------------------------
+print("Uploading data file for Code Interpreter...")
+data_file = agents_client.upload_file_and_poll(
+    file_path=str(data_file_path),
+    purpose="agents",
+)
+print(f"  Uploaded: {data_file.filename} (ID: {data_file.id})")
 
-    # Create the Code Interpreter tool with both files attached
-    code_interpreter = CodeInterpreterTool(
-        container=CodeInterpreterToolAuto(
-            file_ids=[data_file.id, policy_file.id]
-        )
-    )
+print("Uploading expense policy file...")
+policy_file = agents_client.upload_file_and_poll(
+    file_path=str(policy_file_path),
+    purpose="agents",
+)
+print(f"  Uploaded: {policy_file.filename} (ID: {policy_file.id})")
 
-    # -----------------------------------------------------------
-    # Define the agent with instructions + tools (Lab 1 + Lab 2)
-    # -----------------------------------------------------------
-    # The agent combines:
-    #   - Grounding instructions (Lab 1)
-    #   - Code Interpreter tool (Lab 1 + Lab 2)
-    #   - Knowledge from uploaded files (Lab 1)
-    agent_instructions = """You are an RFP Expense Analyzer for Javista Services SAL.
+# ---------------------------------------------------------------
+# Create tools (Lab 1 + Lab 2 + Lab 3)
+# ---------------------------------------------------------------
 
-You have access to two files:
-1. data.txt - Contains the RFP expense summary with consultant costs, hours, and project details
-2. expense_policy.txt - Contains the company expense policy with rate caps and approval thresholds
+# Lab 1 + Lab 2: Code Interpreter with both uploaded files
+code_interpreter = CodeInterpreterTool(
+    file_ids=[data_file.id, policy_file.id]
+)
+
+# Lab 3: Custom function tools from user_functions.py
+functions = FunctionTool(user_functions)
+
+# Lab 3: Combine all tools into a ToolSet
+toolset = ToolSet()
+toolset.add(code_interpreter)
+toolset.add(functions)
+
+# Lab 3 KEY CONCEPT: Enable auto function calling
+# This lets the agent automatically invoke our custom functions
+agents_client.enable_auto_function_calls(toolset)
+
+# ---------------------------------------------------------------
+# Agent instructions (Lab 1: grounding with policy knowledge)
+# ---------------------------------------------------------------
+agent_instructions = """You are an RFP Expense Analyzer for Javista Services SAL.
+
+You have access to two uploaded files via the Code Interpreter:
+1. data.txt - RFP expense summary with consultant costs, hours, and project details
+2. expense_policy.txt - Company expense policy with rate caps and approval thresholds
 
 Your capabilities:
-- Answer questions about the RFP expense data using Python analysis (Code Interpreter)
-- Answer questions about expense policy rules based on the policy document
-- Create text-based visualizations and charts of the expense data
-- Calculate statistical metrics (averages, totals, standard deviations, etc.)
-- Compare actual costs against policy rate caps to identify overruns
-- When a user wants to submit an expense report, collect their email, project name, description, and amount
-- When a user wants to flag a budget overrun, collect the category, budgeted amount, actual amount, and reason
+- Analyze RFP expense data using Python (Code Interpreter)
+- Answer expense policy questions from the policy document
+- Create text-based charts and visualizations
+- Calculate statistics (averages, totals, standard deviations)
+- Compare actual costs against policy rate caps
+- Submit expense reports using submit_expense_report function
+  (collect email, project name, description, and amount first)
+- Flag budget overruns using flag_budget_overrun function
+  (collect category, budgeted amount, actual amount, and reason first)
 
-Always use Python (Code Interpreter) when performing calculations or creating charts.
-Be concise but thorough in your analysis.
-Reference specific policy rules when answering policy questions.
+Always use Code Interpreter for calculations and charts.
+Be concise. Reference specific policy rules when relevant.
 """
 
-    print("\nCreating agent: rfp-expense-agent...")
-    agent = project_client.agents.create_version(
-        agent_name="rfp-expense-agent",
-        definition=PromptAgentDefinition(
-            model=model_deployment,
-            instructions=agent_instructions,
-            tools=[code_interpreter],
-        ),
+# ---------------------------------------------------------------
+# Create the agent (Lab 2: create_agent with model + instructions + toolset)
+# ---------------------------------------------------------------
+print("\nCreating agent: rfp-expense-agent...")
+agent = agents_client.create_agent(
+    model=model_deployment,
+    name="rfp-expense-agent",
+    instructions=agent_instructions,
+    toolset=toolset,
+)
+print(f"  Agent created: {agent.name} (ID: {agent.id})")
+
+# ---------------------------------------------------------------
+# Create a thread (Lab 2 + Lab 3: conversation thread)
+# ---------------------------------------------------------------
+print("Creating conversation thread...")
+thread = agents_client.threads.create()
+print(f"  Thread created (ID: {thread.id})")
+
+# ---------------------------------------------------------------
+# Interactive chat loop
+# ---------------------------------------------------------------
+print("\n" + "=" * 60)
+print("Chat with the RFP Expense Analyzer Agent")
+print("-" * 60)
+print("Try these prompts:")
+print("  'What is the highest cost category?'")
+print("  'Create a bar chart of costs by consultant'")
+print("  'Which consultants exceed their policy rate caps?'")
+print("  'Submit an expense report'")
+print("  'Flag a budget overrun for travel'")
+print("Type 'quit' to exit.")
+print("=" * 60 + "\n")
+
+while True:
+    user_prompt = input("You: ").strip()
+    if not user_prompt:
+        continue
+    if user_prompt.lower() == "quit":
+        print("\nEnding conversation...\n")
+        break
+
+    # -----------------------------------------------------------
+    # Send a prompt to the agent (Lab 3 pattern)
+    # -----------------------------------------------------------
+    message = agents_client.messages.create(
+        thread_id=thread.id,
+        role="user",
+        content=user_prompt,
     )
-    print(f"  ✓ Agent created: {agent.name} (version: {agent.version})")
 
-    # -----------------------------------------------------------
-    # Create a conversation for the chat session (Lab 2)
-    # -----------------------------------------------------------
-    print("Creating conversation thread...")
-    conversation = openai_client.conversations.create()
-    print(f"  ✓ Conversation created (ID: {conversation.id})")
-
-    # -----------------------------------------------------------
-    # Interactive chat loop (Lab 2 + Lab 3 pattern)
-    # -----------------------------------------------------------
-    print("\n" + "=" * 60)
-    print("Chat with the RFP Expense Analyzer Agent")
-    print("Type your questions about the RFP data or expense policy.")
-    print("Type 'quit' to exit.")
-    print("=" * 60 + "\n")
-
-    while True:
-        # Get user input
-        user_prompt = input("You: ").strip()
-        if not user_prompt:
-            continue
-        if user_prompt.lower() == "quit":
-            print("\nEnding conversation...\n")
-            break
-
-        # -----------------------------------------------------------
-        # Send a prompt to the agent (Lab 2 pattern)
-        # -----------------------------------------------------------
-        openai_client.conversations.items.create(
-            conversation_id=conversation.id,
-            items=[
-                {"type": "message", "role": "user", "content": user_prompt}
-            ],
-        )
-
-        response = openai_client.responses.create(
-            conversation=conversation.id,
-            extra_body={
-                "agent": {"name": agent.name, "type": "agent_reference"}
-            },
-            input="",
-        )
-
-        # -----------------------------------------------------------
-        # Check the response status for failures (Lab 2)
-        # -----------------------------------------------------------
-        if response.status == "failed":
-            print(f"\n  ✗ Response failed: {response.error}\n")
-            continue
-
-        # -----------------------------------------------------------
-        # Show the latest response from the agent (Lab 2)
-        # -----------------------------------------------------------
-        print(f"\nAgent: {response.output_text}\n")
-
-    # -----------------------------------------------------------
-    # Get the conversation history (Lab 2 + Lab 3 pattern)
-    # -----------------------------------------------------------
-    print("=" * 60)
-    print("CONVERSATION LOG")
-    print("=" * 60 + "\n")
-
-    items = openai_client.conversations.items.list(
-        conversation_id=conversation.id
+    # Lab 3 KEY CONCEPT: create_and_process handles auto function calling
+    run = agents_client.runs.create_and_process(
+        thread_id=thread.id,
+        agent_id=agent.id,
     )
-    for item in items:
-        if item.type == "message":
-            role = item.role.upper()
-            content = item.content[0].text if item.content else "(no content)"
-            print(f"  [{role}]: {content}\n")
 
     # -----------------------------------------------------------
-    # Clean up (Lab 2 + Lab 3 pattern)
+    # Check for failures (Lab 2 + Lab 3)
     # -----------------------------------------------------------
-    print("=" * 60)
-    print("CLEANUP")
-    print("=" * 60)
+    if run.status == "failed":
+        print(f"\n  Run failed: {run.last_error}\n")
+        continue
 
-    openai_client.conversations.delete(conversation_id=conversation.id)
-    print("  ✓ Conversation deleted")
-
-    project_client.agents.delete_version(
-        agent_name=agent.name, agent_version=agent.version
+    # -----------------------------------------------------------
+    # Show response (Lab 3: get_last_message_text_by_role)
+    # -----------------------------------------------------------
+    last_msg = agents_client.messages.get_last_message_text_by_role(
+        thread_id=thread.id,
+        role=MessageRole.AGENT,
     )
-    print("  ✓ Agent deleted")
+    if last_msg:
+        print(f"\nAgent: {last_msg.text.value}\n")
 
-    print("\n  All resources cleaned up successfully.")
-    print("  Thank you for using the RFP Expense Analyzer!\n")
+# ---------------------------------------------------------------
+# Conversation history (Lab 2 + Lab 3)
+# ---------------------------------------------------------------
+print("=" * 60)
+print("CONVERSATION LOG")
+print("=" * 60 + "\n")
+
+messages = agents_client.messages.list(
+    thread_id=thread.id,
+    order=ListSortOrder.ASCENDING,
+)
+for msg in messages:
+    if msg.text_messages:
+        last_text = msg.text_messages[-1]
+        role = str(msg.role).upper()
+        print(f"  [{role}]: {last_text.text.value}\n")
+
+# ---------------------------------------------------------------
+# Clean up (Lab 2 + Lab 3)
+# ---------------------------------------------------------------
+print("=" * 60)
+print("CLEANUP")
+print("=" * 60)
+
+agents_client.delete_agent(agent.id)
+print("  Agent deleted")
+
+print("\n  All resources cleaned up successfully.")
+print("  Thank you for using the RFP Expense Analyzer!\n")
