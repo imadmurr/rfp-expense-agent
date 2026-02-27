@@ -1,0 +1,34 @@
+RFP Expense Summary Report - Javista Services SAL
+==================================================
+
+Project: Dynamics 365 Implementation for BankLeb
+RFP Reference: RFP-2026-0042
+Date: February 2026
+
+Category              | Amount (USD) | Hours | Consultant
+---------------------------------------------------
+Senior D365 Developer | 12,500       | 125   | Ahmad Khalil
+Senior D365 Developer | 11,800       | 118   | Sara Mansour
+Junior D365 Developer | 7,200        | 120   | Omar Farah
+AI Engineer           | 14,000       | 100   | Lina Haddad
+Project Manager       | 9,500        | 95    | Rami Khoury
+QA Tester             | 5,800        | 116   | Nadia Saab
+DevOps Engineer       | 8,900        | 89    | Karim Jaber
+UX Designer           | 6,300        | 90    | Maya Rizk
+Business Analyst      | 7,800        | 104   | Tony Semaan
+Technical Writer      | 4,200        | 84    | Joelle Aoun
+
+Travel                | 3,200        | -     | Team
+Software Licenses     | 5,500        | -     | Team
+Training Materials    | 1,800        | -     | Team
+Office Equipment      | 2,400        | -     | Team
+
+Total Personnel Cost: $88,000
+Total Other Costs: $12,900
+Grand Total: $100,900
+Total Hours: 1,041
+Average Hourly Rate: $84.53
+
+Submission Deadline: March 15, 2026
+Project Start Date: April 1, 2026
+Contract Duration: 12 months

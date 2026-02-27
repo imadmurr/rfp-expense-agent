@@ -1,0 +1,46 @@
+Javista Services SAL - RFP Expense Policy
+==========================================
+Version 2.0 | Effective: January 2026
+
+1. CONSULTANT RATE CAPS
+   - Senior Developers: Maximum $110/hour
+   - Junior Developers: Maximum $65/hour
+   - AI Engineers: Maximum $150/hour
+   - Project Managers: Maximum $105/hour
+   - QA Testers: Maximum $55/hour
+   - DevOps Engineers: Maximum $105/hour
+   - UX Designers: Maximum $80/hour
+   - Business Analysts: Maximum $85/hour
+   - Technical Writers: Maximum $55/hour
+
+2. TRAVEL EXPENSES
+   - Maximum travel budget per project: $5,000
+   - Per diem allowance: $75/day
+   - Flight bookings must be economy class for domestic, business class for international
+   - Hotel maximum: $150/night
+
+3. SOFTWARE & LICENSES
+   - Pre-approved licenses do not require additional approval
+   - Licenses exceeding $2,000 require manager approval
+   - Annual license renewals must be budgeted in Q4
+
+4. TRAINING & MATERIALS
+   - Maximum training budget per consultant: $500
+   - Certification exam fees are fully reimbursable
+   - Conference attendance requires pre-approval
+
+5. EQUIPMENT
+   - Equipment purchases over $1,000 require CTO approval
+   - Laptops are provided by Javista (not billable to client)
+   - Specialized hardware may be billed with client pre-approval
+
+6. RFP SUBMISSION RULES
+   - All RFP responses must include a minimum 10% profit margin
+   - Discount offers exceeding 15% require CEO approval
+   - Payment terms: Net 30 days standard, Net 60 requires CFO approval
+   - Proposals must be submitted at least 48 hours before deadline
+
+7. APPROVAL THRESHOLDS
+   - Under $10,000: Team Lead approval
+   - $10,000 - $50,000: Director approval
+   - Over $50,000: CTO + CEO approval
