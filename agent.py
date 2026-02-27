@@ -70,11 +70,12 @@ print("--- End Preview ---\n")
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 
-# Lab 1 + 2: CodeInterpreterTool for data analysis
+# Lab 2: CodeInterpreterTool + FilePurpose for file upload
 # Lab 3: FunctionTool, ToolSet for custom functions
 # Lab 3: ListSortOrder, MessageRole for conversation history
 from azure.ai.agents.models import (
     CodeInterpreterTool,
+    FilePurpose,
     FunctionTool,
     ToolSet,
     ListSortOrder,
@@ -99,24 +100,27 @@ project_client = AIProjectClient(
 )
 
 # Get the AgentsClient from the project (bridges Lab 2 + Lab 3)
+# Official docs: "The .agents property gives you access to an
+# authenticated AgentsClient from the azure-ai-agents package."
 agents_client = project_client.agents
 
 # ---------------------------------------------------------------
 # Upload files (Lab 2: file upload for Code Interpreter)
+# Official SDK method: agents_client.files.upload_and_poll()
 # ---------------------------------------------------------------
 print("Uploading data file for Code Interpreter...")
-data_file = agents_client.upload_file_and_poll(
+data_file = agents_client.files.upload_and_poll(
     file_path=str(data_file_path),
-    purpose="agents",
+    purpose=FilePurpose.AGENTS,
 )
-print(f"  Uploaded: {data_file.filename} (ID: {data_file.id})")
+print(f"  Uploaded: {data_file.id}")
 
 print("Uploading expense policy file...")
-policy_file = agents_client.upload_file_and_poll(
+policy_file = agents_client.files.upload_and_poll(
     file_path=str(policy_file_path),
-    purpose="agents",
+    purpose=FilePurpose.AGENTS,
 )
-print(f"  Uploaded: {policy_file.filename} (ID: {policy_file.id})")
+print(f"  Uploaded: {policy_file.id}")
 
 # ---------------------------------------------------------------
 # Create tools (Lab 1 + Lab 2 + Lab 3)
@@ -164,7 +168,7 @@ Be concise. Reference specific policy rules when relevant.
 """
 
 # ---------------------------------------------------------------
-# Create the agent (Lab 2: create_agent with model + instructions + toolset)
+# Create the agent (Lab 2 + Lab 3: create_agent with toolset)
 # ---------------------------------------------------------------
 print("\nCreating agent: rfp-expense-agent...")
 agent = agents_client.create_agent(
